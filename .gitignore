@@ -7,7 +7,3 @@ __pycache__/
 .idea
 
 .env
-
-*.crt
-*.csr
-*.key
