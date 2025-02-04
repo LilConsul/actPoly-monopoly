@@ -23,5 +23,3 @@ envsubst '$$FRONTEND_PORT_INTERNAL $$BACKEND_PORT_INTERNAL $$MAILHOG_UI_PORT_INT
 
 echo "Starting Nginx."
 exec nginx -g "daemon off;"
-
-
