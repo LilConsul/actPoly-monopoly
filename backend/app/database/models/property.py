@@ -1,7 +1,11 @@
 from sqlalchemy import ForeignKey, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.database.models.base import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .group import Group
+    from .tile import Tile
 
 
 class Property(Base):
