@@ -1,6 +1,9 @@
 from fastapi import FastAPI
+from loguru import logger
 from fastapi.middleware.cors import CORSMiddleware
 from settings import settings
+
+logger.add(f"{settings.ROOT_DIR}/app.log", rotation="500 MB", compression="zip", retention="7 days")
 app = FastAPI(root_path="/api/")
 app.add_middleware(
     CORSMiddleware,
@@ -13,8 +16,8 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World", "environment": settings.SECRET_KEY}
-
+    logger.info("Root endpoint accessed")
+    return {"message": "Hello World"}
 
 # For development purposes
 
