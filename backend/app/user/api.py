@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.db_helper import db_helper
@@ -16,13 +16,13 @@ async def register(user_data: UserRegister, session: AsyncSession = Depends(db_h
     if user_exists is not None:
         if user_exists.email == user_data.email:
             return JSONResponse(
-                content={"detail": "This email is already registered"},
+                content={"detail": ["This email is already registered"]},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
         if user_exists.username == user_data.username:
             return JSONResponse(
-                content={"detail": "This username is already registered"},
+                content={"detail": ["This username is already registered"]},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
     user_data = user_data.model_dump(exclude={"confirm_password"})
@@ -32,5 +32,5 @@ async def register(user_data: UserRegister, session: AsyncSession = Depends(db_h
     session.add(user)
     await session.commit()
 
-    #TODO: add email verification
+    # TODO: add email verification
     return {"message": "User registered successfully"}
