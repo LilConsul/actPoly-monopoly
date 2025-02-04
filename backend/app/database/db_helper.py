@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 from contextlib import asynccontextmanager
 from app.settings import settings
+from loguru import logger
 
 
 class DatabaseHelper:
@@ -34,6 +35,7 @@ class DatabaseHelper:
         try:
             yield session
         except Exception as e:
+            logger.error(f"Database error: {e}")
             await session.rollback()
             raise e
         finally:
