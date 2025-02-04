@@ -84,8 +84,8 @@ services:
       - mailhog
     volumes:
       - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf.template
-      - ./nginx/certs/cert.crt:/etc/nginx/cert.crt
-      - ./nginx/certs/cert.key:/etc/nginx/cert.key
+      - ./nginx/entrypoint.sh:/etc/nginx/entrypoint.sh
+      - ./nginx/certs/:/etc/nginx/certs/
     environment:
         - BACKEND_PORT_INTERNAL=${BACKEND_PORT_INTERNAL}
         - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
@@ -93,11 +93,7 @@ services:
         - REDIS_PORT_INTERNAL=${REDIS_PORT_INTERNAL}
         - MAILHOG_UI_PORT_INTERNAL=${MAILHOG_UI_PORT_INTERNAL}
         - DOMAIN=${DOMAIN}
-    entrypoint: >
-      sh -c "
-        envsubst '$$FRONTEND_PORT_INTERNAL $$BACKEND_PORT_INTERNAL $$MAILHOG_UI_PORT_INTERNAL $$DOMAIN' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf &&
-        exec nginx -g 'daemon off;'
-      "
+    entrypoint: ["/bin/sh", "/etc/nginx/entrypoint.sh"]
     ports:
       - "${HTTP_PORT}:80"
       - "${HTTPS_PORT}:443"
