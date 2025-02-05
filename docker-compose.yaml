@@ -33,6 +33,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=postgres
+      - VERIFY_MAIL_PATH=${VERIFY_MAIL_PATH}
+      - PASSWORD_RESET_PATH=${PASSWORD_RESET_PATH}
     command: uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT_INTERNAL} --reload --proxy-headers
     networks:
       - app-network
@@ -51,6 +53,8 @@ services:
     command: "npm run dev"
     environment:
       - PORT=${FRONTEND_PORT_INTERNAL}
+      - VERIFY_MAIL_PATH=${VERIFY_MAIL_PATH}
+      - PASSWORD_RESET_PATH=${PASSWORD_RESET_PATH}
     networks:
       - app-network
 

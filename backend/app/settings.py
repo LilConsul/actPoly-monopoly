@@ -47,6 +47,19 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
+    # Mail settings
+    VERIFY_MAIL_PATH: str
+
+    @property
+    def VERIFY_MAIL_URL(self) -> str:
+        return f"https://{self.DOMAIN}{self.VERIFY_MAIL_PATH}"
+
+    PASSWORD_RESET_PATH: str
+
+    @property
+    def PASSWORD_RESET_URL(self) -> str:
+        return f"https://{self.DOMAIN}{self.PASSWORD_RESET_PATH}"
+
     BASE_DIR: Path = Path(__file__).resolve().parent
     ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 
