@@ -29,18 +29,13 @@ class User(Base):
     )
 
     @classmethod
-    async def find_by_email_username(cls, session: AsyncSession, email: str | None = None, username: str | None = None):
-        if email is None and username is None:
-            raise ValueError("At least one of email or username must be provided")
-
-        conditions = []
-        if email is not None:
-            conditions.append(cls.email == email)
-        if username is not None:
-            conditions.append(cls.username == username)
-
-        query = select(cls).where(or_(*conditions))
-
+    async def find_by_email_and_username(cls, session: AsyncSession, email: str, username: str):
+        query = select(cls).where(
+            or_(
+                cls.email == email,
+                cls.username == username
+            )
+        )
         result = await session.execute(query)
         return result.scalars().one_or_none()
 
@@ -56,10 +51,15 @@ class User(Base):
                            password: str,
                            email: str | None = None,
                            username: str | None = None):
-        if email is None and username is None:
-            raise ValueError("At least one of email or username must be provided")
+        if email:
+            query = select(cls).where(cls.email == email)
+        elif username:
+            query = select(cls).where(cls.username == username)
+        else:
+            return False
+        result = await session.execute(query)
+        user = result.scalars().one_or_none()
 
-        user = await cls.find_by_email_username(session, email, username)
         if not user or not verify_password(password, user.password):
             return False
         return user

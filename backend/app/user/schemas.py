@@ -25,18 +25,5 @@ class UserRegister(UserSchema):
         return v
 
 
-class UserLogin(BaseModel):
-    email: EmailStr | None = None
-    username: str | None = None
-    password: str
-
-    @model_validator(mode='before')
-    def check_email_or_username(cls, data: dict) -> dict:
-        email, username = data.get('email'), data.get('username')
-        if email is None and username is None:
-            raise ValueError('Either email or username must be provided')
-        return data
-
-
 class URLToken(BaseModel):
     token: str

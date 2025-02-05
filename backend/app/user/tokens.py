@@ -1,8 +1,30 @@
+from datetime import datetime, timezone, timedelta
+import jwt
 from itsdangerous import URLSafeTimedSerializer
 from loguru import logger
+
 from app.settings import settings
 
 serializer = URLSafeTimedSerializer(secret_key=settings.SECRET_KEY, salt="mail")
+
+
+def create_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_SECONDS)
+    to_encode.update({"exp": expire})
+    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return token
+
+
+def decode_token(token: str) -> dict:
+    try:
+        token_data = jwt.decode(
+            jwt=token, key=settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        return token_data
+    except jwt.PyJWTError as e:
+        logger.exception(e)
+        return None
 
 
 def create_url_safe_token(data: dict):
