@@ -36,3 +36,12 @@ async def send_verification_mail(background_tasks: BackgroundTasks, email: str, 
         body={"link": link},
     )
     background_tasks.add_task(mail.send_message, message, template_name="mail/verify.html")
+
+
+async def send_password_reset_mail(background_tasks: BackgroundTasks, email: str, link: str):
+    message = create_single_message(
+        recipient=email,
+        subject="Password Reset",
+        body={"link": link},
+    )
+    background_tasks.add_task(mail.send_message, message, template_name="mail/reset_password.html")

@@ -2,16 +2,15 @@ from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException, 
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.db_helper import db_helper
-from .cookie import OAuth2PasswordBearerWithCookie
+from .cookie import oauth2_scheme
 from .hash import get_password_hash
-from .schemas import UserRegister, URLToken
+from .schemas import UserRegister, URLToken, EmailData
 from app.database.models import User, Player
 from app.utils.mail import send_verification_mail
 from app.settings import settings
 from .tokens import create_url_safe_token, decode_url_safe_token, create_token, decode_token
 
 router = APIRouter(prefix="/user", tags=["users"])
-oauth2_scheme = OAuth2PasswordBearerWithCookie("/api/user/login")
 
 
 @router.post("/register")
@@ -57,8 +56,7 @@ async def register(
 @router.post("/verify")
 async def verify(token: URLToken, session: AsyncSession = Depends(db_helper.session_dependency)):
     token_data = decode_url_safe_token(token.token)
-    user = await User.find_by_id(session, int(token_data["id"]))
-    if user is None:
+    if not (user := await User.find_by_id(session, int(token_data["id"]))):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid token",
@@ -117,3 +115,13 @@ async def user_data(token: str = Depends(oauth2_scheme), session: AsyncSession =
 async def logout(response: Response):
     response.delete_cookie("access_token")
     return {"message": "Logout successful"}
+
+
+@router.post("/password-reset")
+async def password_reset_request(email: EmailData, session: AsyncSession = Depends(db_helper.session_dependency)):
+    email = email.email
+    if not (user := await User.find_by_email(session, email)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email not registered",
+        )

@@ -27,3 +27,7 @@ class UserRegister(UserSchema):
 
 class URLToken(BaseModel):
     token: str
+
+
+class EmailData(BaseModel):
+    email: EmailStr

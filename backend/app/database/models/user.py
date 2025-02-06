@@ -46,6 +46,12 @@ class User(Base):
         return result.scalars().one_or_none()
 
     @classmethod
+    async def find_by_email(cls, session: AsyncSession, email: str):
+        query = select(cls).where(cls.email == email)
+        result = await session.execute(query)
+        return result.scalars().one_or_none()
+
+    @classmethod
     async def authenticate(cls,
                            session: AsyncSession,
                            password: str,
