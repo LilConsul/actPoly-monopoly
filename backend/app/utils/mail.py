@@ -44,4 +44,4 @@ async def send_password_reset_mail(background_tasks: BackgroundTasks, email: str
         subject="Password Reset",
         body={"link": link},
     )
-    background_tasks.add_task(mail.send_message, message, template_name="mail/reset_password.html")
+    background_tasks.add_task(mail.send_message, message, template_name="mail/password_reset.html")

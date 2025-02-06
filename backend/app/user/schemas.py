@@ -1,21 +1,17 @@
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 from pydantic import EmailStr
+from typing import Optional, Dict, Any
 
 
-class UserSchema(BaseModel):
-    email: EmailStr
-    username: str
-
-
-class UserRegister(UserSchema):
+class PasswordValidation(BaseModel):
     password: str
     confirm_password: str
 
     @field_validator("password")
     def password_valid(cls, v, info: FieldValidationInfo):
-        if "password" in info.data and 8 > len(v) > 100:
-            raise ValueError("password not valid")
+        if "password" in info.data and (len(v) < 8 or len(v) > 100):
+            raise ValueError("password is invalid")
         return v
 
     @field_validator("confirm_password")
@@ -25,9 +21,33 @@ class UserRegister(UserSchema):
         return v
 
 
+class UserSchema(BaseModel):
+    email: EmailStr
+    username: str
+
+
+class UserRegister(UserSchema, PasswordValidation):
+    pass
+
+
 class URLToken(BaseModel):
     token: str
 
 
 class EmailData(BaseModel):
     email: EmailStr
+
+
+class LoginData(BaseModel):
+    username: str
+    password: str
+
+
+class ResponseModel(BaseModel):
+    message: Optional[str] = None
+    detail: Optional[str] = None
+    data: Optional[Dict[Any, Any]] = None
+
+
+class PasswordResetSchema(URLToken, PasswordValidation):
+    pass

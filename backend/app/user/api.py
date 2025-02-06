@@ -1,25 +1,31 @@
 from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException, Response
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.db_helper import db_helper
 from .cookie import oauth2_scheme
 from .hash import get_password_hash
-from .schemas import UserRegister, URLToken, EmailData
+from .schemas import UserRegister, URLToken, EmailData, ResponseModel, LoginData, PasswordResetSchema
 from app.database.models import User, Player
-from app.utils.mail import send_verification_mail
+from app.utils.mail import send_verification_mail, send_password_reset_mail
 from app.settings import settings
 from .tokens import create_url_safe_token, decode_url_safe_token, create_token, decode_token
 
 router = APIRouter(prefix="/user", tags=["users"])
 
 
-@router.get("/")
-async def get_profile_data(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(db_helper.session_dependency)):
+@router.get("/", response_model=ResponseModel, response_model_exclude_none=True)
+async def get_profile_data(
+        token: str = Depends(oauth2_scheme),
+        session: AsyncSession = Depends(db_helper.session_dependency)
+):
     payload = decode_token(token)
     user = await User.get_profile(session, int(payload["sub"]))
-    return user
+    return ResponseModel(
+        message="User data retrieved successfully",
+        data=user
+    )
 
-@router.post("/register")
+
+@router.post("/register", response_model=ResponseModel, response_model_exclude_none=True)
 async def register(
         user_data: UserRegister,
         background_tasks: BackgroundTasks,
@@ -56,11 +62,14 @@ async def register(
 
     await send_verification_mail(background_tasks, user.email, link)
 
-    return {"message": "Account Created! Check email to verify your account"}
+    return ResponseModel(message="Account Created! Check email to verify your account")
 
 
-@router.post("/verify")
-async def verify(token: URLToken, session: AsyncSession = Depends(db_helper.session_dependency)):
+@router.post("/verify", response_model=ResponseModel, response_model_exclude_none=True)
+async def verify(
+        token: URLToken,
+        session: AsyncSession = Depends(db_helper.session_dependency)
+):
     token_data = decode_url_safe_token(token.token)
     if not (user := await User.find_by_id(session, int(token_data["id"]))):
         raise HTTPException(
@@ -70,13 +79,13 @@ async def verify(token: URLToken, session: AsyncSession = Depends(db_helper.sess
 
     user.is_verified = True
     await session.commit()
-    return {"message": "Account verified, you can login now"}
+    return ResponseModel(message="Account verified, you can login now")
 
 
-@router.post("/login")
+@router.post("/login", response_model=ResponseModel, response_model_exclude_none=True)
 async def login(
         response: Response,
-        form_data: OAuth2PasswordRequestForm = Depends(),
+        form_data: LoginData,
         session: AsyncSession = Depends(db_helper.session_dependency)
 ):
     if "@" in form_data.username:
@@ -87,7 +96,7 @@ async def login(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
+            detail="Incorrect username or password",
         )
     if user.is_verified is False:
         raise HTTPException(
@@ -107,7 +116,10 @@ async def login(
         secure=True
     )
 
-    return {"username": user.username, "email": user.email, "message": "Login successful"}
+    return ResponseModel(
+        message="Login successful",
+        data={"username": user.username, "email": user.email}
+    )
 
 
 @router.post("/logout")
@@ -116,11 +128,38 @@ async def logout(response: Response):
     return {"message": "Logout successful"}
 
 
-@router.post("/password-reset")
-async def password_reset_request(email: EmailData, session: AsyncSession = Depends(db_helper.session_dependency)):
+@router.post("/password-reset", response_model=ResponseModel, response_model_exclude_none=True)
+async def password_reset_request(
+        email: EmailData,
+        background_tasks: BackgroundTasks,
+        session: AsyncSession = Depends(db_helper.session_dependency)
+):
     email = str(email.email)
     if not (user := await User.find_by_email(session, email)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email not registered",
         )
+
+    token = create_url_safe_token({"email": email, "id": str(user.id)})
+    url = f"{settings.PASSWORD_RESET_PATH}/{token}/"
+    await send_password_reset_mail(background_tasks, email, url)
+    return ResponseModel(message="Password reset link sent to email")
+
+
+@router.post("/password-reset/verify", response_model=ResponseModel, response_model_exclude_none=True)
+async def password_reset_verify(
+        data: PasswordResetSchema,
+        session: AsyncSession = Depends(db_helper.session_dependency)
+):
+    token_data = decode_url_safe_token(data.token)
+    if not (user := await User.find_by_id(session, int(token_data["id"]))):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token",
+        )
+
+    user.password = get_password_hash(data.password)
+    await session.commit()
+
+    return ResponseModel(message="Password reset successful")
