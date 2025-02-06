@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 import jwt
 from itsdangerous import URLSafeTimedSerializer
+from jwt import ExpiredSignatureError, InvalidTokenError
 from loguru import logger
 
 from app.settings import settings
@@ -22,6 +23,10 @@ def decode_token(token: str) -> dict:
             jwt=token, key=settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         return token_data
+    except ExpiredSignatureError:
+        raise ValueError("Token has expired")
+    except InvalidTokenError:
+        raise ValueError("Invalid token")
     except jwt.PyJWTError as e:
         logger.exception(e)
         return None
