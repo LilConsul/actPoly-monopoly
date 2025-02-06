@@ -13,13 +13,19 @@ from .tokens import create_url_safe_token, decode_url_safe_token, create_token, 
 router = APIRouter(prefix="/user", tags=["users"])
 
 
+@router.get("/")
+async def get_profile_data(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(db_helper.session_dependency)):
+    payload = decode_token(token)
+    user = await User.get_profile(session, int(payload["sub"]))
+    return user
+
 @router.post("/register")
 async def register(
         user_data: UserRegister,
         background_tasks: BackgroundTasks,
         session: AsyncSession = Depends(db_helper.session_dependency)
 ):
-    user_exists = await User.find_by_email_and_username(session, user_data.email, user_data.username)
+    user_exists = await User.find_by_email_and_username(session, str(user_data.email), user_data.username)
 
     if user_exists is not None:
         if user_exists.email == user_data.email:
@@ -104,13 +110,6 @@ async def login(
     return {"username": user.username, "email": user.email, "message": "Login successful"}
 
 
-@router.get("/me")
-async def user_data(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(db_helper.session_dependency)):
-    payload = decode_token(token)
-    user = await User.find_by_id(session, int(payload["sub"]))
-    return user
-
-
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie("access_token")
@@ -119,7 +118,7 @@ async def logout(response: Response):
 
 @router.post("/password-reset")
 async def password_reset_request(email: EmailData, session: AsyncSession = Depends(db_helper.session_dependency)):
-    email = email.email
+    email = str(email.email)
     if not (user := await User.find_by_email(session, email)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
