@@ -5,6 +5,7 @@ from utils import validation_exception_handler
 from loguru import logger
 from settings import settings
 from app.user.api import router as user_router
+from app.game.api import router as game_router
 
 logger.add(f"{settings.ROOT_DIR}/app.log", rotation="50 MB", compression="zip", retention="7 days")
 app = FastAPI(
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(user_router)
+app.include_router(game_router)
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
