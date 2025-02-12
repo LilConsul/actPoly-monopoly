@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useUserStore } from '../store/userStore.js';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +12,6 @@ export const RegisterModal = ({ onClose }) => {
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useUserStore();
   const { toast } = useToast();
 
   const handleRegister = async (e) => {
@@ -21,70 +19,38 @@ export const RegisterModal = ({ onClose }) => {
     setIsLoading(true);
 
     if (!username.trim()) {
-      toast({
-        title: "Error",
-        description: "Username is required",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Username is required", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      toast({
-        title: "Error",
-        description: "Valid email is required",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Valid email is required", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
     if (password !== repeatPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post('/api/user/register', {
-        username,
-        email,
-        password
-      });
+      await axios.post('/api/user/register', { username, email, password, confirm_password: repeatPassword });
 
-      if (response.data.data) {
-        setUser(response.data.data);
-        toast({
-          title: "Success",
-          description: "Registration successful"
-        });
-        onClose();
-      } else {
-        toast({
-          title: "Error",
-          description: "Invalid registration response",
-          variant: "destructive"
-        });
-      }
+      toast({ title: "Success", description: "Account Created! Check email to verify your account" });
+      onClose();
     } catch (err) {
       toast({
         title: "Error",
-        description: err.response?.data?.message || 'Registration failed',
+        description: err.response?.data?.detail || 'Registration failed',
         variant: "destructive"
       });
     } finally {
@@ -97,9 +63,7 @@ export const RegisterModal = ({ onClose }) => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Register for ActPoly</DialogTitle>
-          <DialogDescription>
-            Create a new account to start playing
-          </DialogDescription>
+          <DialogDescription>Create a new account to start playing</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -152,18 +116,10 @@ export const RegisterModal = ({ onClose }) => {
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-            >
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-            >
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? 'Registering...' : 'Register'}
             </Button>
           </div>
