@@ -41,6 +41,7 @@ class GameManager(ConnectionManager):
         }
 
     async def connect(self, game: uuid.UUID, websocket: WebSocket, user_id: int, session: AsyncSession):
+        # TODO: fix if user is already in game but reconnects
         if game in self.active_games and (
                 self.active_games[game]["status"] == "started" or len(self.active_games[game]["users"]) == 4):
             raise WebSocketException(code=403)
