@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Depends
+from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Depends, WebSocketException
 import uuid
 
 from sqlalchemy import select
