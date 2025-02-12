@@ -12,7 +12,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {Settings, LogOut} from 'lucide-react';
+import {Settings, LogOut, User} from 'lucide-react';
 import axios from "axios";
 
 import {LoginModal} from './LoginModal';
@@ -48,6 +48,10 @@ export const Header = () => {
     };
 
 
+    const handleProfile = () => {
+        navigate('/profile/' + user.username);
+    };
+
     return (
         <>
             <header className="bg-white shadow py-4 relative">
@@ -76,9 +80,18 @@ export const Header = () => {
                                     <DropdownMenuContent align="end" className="w-48">
                                         <DropdownMenuItem
                                             className="cursor-pointer flex items-center"
+                                            onClick={handleProfile}
+                                        >
+                                            <User style={{width: '1rem', height: '1rem'}}
+                                                      className="mr-2 h-4 w-4"/>
+                                            Profile
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            className="cursor-pointer flex items-center"
                                             onClick={handleSettings}
                                         >
-                                            <Settings className="mr-2 h-4 w-4"/>
+                                            <Settings style={{width: '1rem', height: '1rem'}}
+                                                      className="mr-2 h-4 w-4"/>
                                             Settings
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator/>
@@ -86,7 +99,9 @@ export const Header = () => {
                                             className="cursor-pointer text-red-600 flex items-center"
                                             onClick={handleLogout}
                                         >
-                                            <LogOut className="mr-2 h-4 w-4"/>
+                                            <LogOut
+                                                style={{width: '1rem', height: '1rem'}}
+                                                className="mr-2 h-4 w-4"/>
                                             Logout
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
