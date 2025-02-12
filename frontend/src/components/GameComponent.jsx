@@ -103,10 +103,9 @@ export const GameComponent = () => {
     }
 
     const messageData = {
-      type: "chat",
+      type: "game",
       content: message,
-      sender: user.username,
-      timestamp: new Date().toISOString(),
+      timestamp: Math.floor(Date.now() / 1000),
     };
 
     wsRef.current.send(JSON.stringify(messageData));

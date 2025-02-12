@@ -23,9 +23,8 @@ async def websocket_endpoint(websocket: WebSocket, game_uuid: uuid.UUID):
 
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.send_personal_message(f"You wrote: {data}", websocket)
-            await manager.broadcast(game_uuid, f"Client #{user_id} says: {data}")
+            data = await websocket.receive_json()
+            await manager.broadcast(game_uuid, f"Client #{user_id} says: {data['content']}")
     except WebSocketDisconnect:
         manager.disconnect(game_uuid, websocket)
         await manager.broadcast(game_uuid, f"Client #{user_id} left the chat")
