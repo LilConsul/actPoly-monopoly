@@ -29,8 +29,8 @@ export const RegisterModal = ({ onClose }) => {
       return false;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return false;
     }
 
@@ -149,7 +149,7 @@ export const RegisterModal = ({ onClose }) => {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Password must be at least 6 characters long
+                Password must be at least 8 characters long
               </p>
             </div>
 
