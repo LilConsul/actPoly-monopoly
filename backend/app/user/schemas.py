@@ -10,7 +10,7 @@ class PasswordValidation(BaseModel):
 
     @field_validator("password")
     def password_valid(cls, v, info: FieldValidationInfo):
-        if "password" in info.data and (len(v) < 8 or len(v) > 100):
+        if "password" in info.data and not (8 <= len(v) <= 100):
             raise ValueError("password is invalid")
         return v
 
