@@ -1,13 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketException
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from fastapi.websockets import WebSocketDisconnect
-
+import random
 from .connection_manager import ConnectionManager
 from ..database.models import Tile, Property, User
 
@@ -18,7 +17,7 @@ class GameManager(ConnectionManager):
         self.active_games: Dict[uuid.UUID, Dict[str, Any]] = {}
 
     async def first_init_game(self, game: uuid.UUID, session: AsyncSession):
-        self.active_games[game] = {"tiles": [], "users": {}, "game_data": {}, "status": str}
+        self.active_games[game] = {"tiles": [], "users": {}, "game_data": {}, "status": "waiting"}
         query = select(Tile).options(
             joinedload(Tile.property).joinedload(Property.group),
             joinedload(Tile.railway),
@@ -28,6 +27,7 @@ class GameManager(ConnectionManager):
         result = await session.execute(query)
         tiles = result.scalars().all()
         self.active_games[game]["tiles"] = jsonable_encoder(tiles)
+        # TODO: Add cart data
 
     async def get_username(self, game: uuid.UUID, user_id: int, session: AsyncSession):
         username = await User.find_username_by_id(session, user_id)
@@ -43,7 +43,7 @@ class GameManager(ConnectionManager):
     async def connect(self, game: uuid.UUID, websocket: WebSocket, user_id: int, session: AsyncSession):
         if game in self.active_games and (
                 self.active_games[game]["status"] == "started" or len(self.active_games[game]["users"]) == 4):
-            return WebSocketDisconnect(403)
+            raise WebSocketException(code=403)
 
         await super()._connect(game, websocket)
         if game not in self.active_games:
@@ -61,3 +61,57 @@ class GameManager(ConnectionManager):
                 self.create_data(f"{self.active_games[game]["users"][user_id]} joined"),
                 websocket
             )
+
+    async def disconnect(self, game: uuid.UUID, websocket: WebSocket, user_id: int):
+        super()._disconnect(game, websocket)
+        if self.active_games[game]["status"] != "started":
+            del self.active_games[game]["users"][user_id]
+        await self.broadcast_except_sender(
+            game,
+            self.create_data(f"{self.active_games[game]["users"][user_id]} disconnected"),
+            websocket
+        )
+
+    async def start_game(self, game: uuid.UUID, websocket: WebSocket):
+        if len(self.active_games[game]["users"]) < 2:
+            await self.send_personal_message(
+                self.create_data("Need at least 2 players to start the game"),
+                websocket
+            )
+            return
+        self.active_games[game]["status"] = "started"
+        # TODO: Add logic for starting the game (player order, etc.)
+        await self.broadcast(game, self.create_data("Game started"))
+
+    async def roll_dice(self, game: uuid.UUID, websocket: WebSocket, user_id: int):
+        # TODO: Add logic for checking if it's user's turn
+        if self.active_games[game]["status"] != "started":
+            await self.send_personal_message(
+                self.create_data("Game not started yet"),
+                websocket
+            )
+            return
+        dice1 = random.randint(1, 6)
+        dice2 = random.randint(1, 6)
+        await self.broadcast(
+            game,
+            self.create_data(f"{self.active_games[game]['users'][user_id]} rolled {dice1} {dice2}")
+        )
+        # TODO: Add logic for moving the user position
+
+    async def process_game_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+        content = data["content"]
+        match content:
+            case "start":
+                await self.start_game(game, websocket)
+            case "roll":
+                await self.roll_dice(game, websocket, user_id)
+
+    async def process_chat_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+        pass
+
+    async def process_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+        if data["type"] == "game":
+            await self.process_game_message(game, websocket, data, user_id)
+        elif data["type"] == "chat":
+            await self.process_chat_message(game, websocket, data, user_id)
