@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 from sqlalchemy.pool import NullPool
-from contextlib import asynccontextmanager
 from app.settings import settings
 from loguru import logger
 

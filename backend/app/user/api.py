@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.db_helper import db_helper
+from app.database import db_helper
 from .cookie import oauth2_scheme
 from .hash import get_password_hash
 from .schemas import UserRegister, URLToken, EmailData, ResponseModel, LoginData, PasswordResetSchema
