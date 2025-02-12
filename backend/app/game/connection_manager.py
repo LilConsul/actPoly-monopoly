@@ -15,7 +15,7 @@ class ConnectionManager:
             self.active_connections[game] = []
         self.active_connections[game].append(websocket)
 
-    def disconnect(self, game: uuid.UUID, websocket: WebSocket):
+    def _disconnect(self, game: uuid.UUID, websocket: WebSocket):
         """Remove a WebSocket connection from a room."""
         if game in self.active_connections:
             self.active_connections[game].remove(websocket)

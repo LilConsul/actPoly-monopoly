@@ -15,6 +15,7 @@ router = APIRouter(prefix="/ws/game", tags=["game"])
 manager = GameManager()
 
 
+# test only
 @router.get("/")
 async def get(session: AsyncSession = Depends(db_helper.session_dependency)):
     query = select(Tile).options(
@@ -36,12 +37,12 @@ async def websocket_endpoint(
 ):
     token: str = websocket.cookies.get("access_token")
     if not token or "Bearer" not in token:
-        return WebSocketDisconnect(403)
+        raise WebSocketException(code=403)
 
     try:
         payload = decode_token(token.split(" ")[1])
     except Exception:
-        return WebSocketDisconnect(403)
+        raise WebSocketException(code=403)
 
     user_id = int(payload.get("sub"))
     await manager.connect(game_uuid, websocket, user_id, session)
@@ -49,10 +50,6 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_json()
-            await manager.broadcast(game_uuid,
-                                    {"message": f"Client #{user_id} says: {data['content']}", "type": "game",
-                                     "timestamp": round(datetime.now(timezone.utc).timestamp())})
+            await manager.process_message(game_uuid, websocket, data, user_id)
     except WebSocketDisconnect:
-        manager.disconnect(game_uuid, websocket)
-        await manager.broadcast(game_uuid, {"message": f"Client #{user_id} left the chat", "type": "game",
-                                            "timestamp": round(datetime.now(timezone.utc).timestamp())})
+        await manager.disconnect(game_uuid, websocket, user_id)
