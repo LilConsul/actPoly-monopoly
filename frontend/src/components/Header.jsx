@@ -6,6 +6,7 @@ import {useToast} from "@/hooks/use-toast";
 import {Toaster} from "@/components/ui/toaster";
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Button} from '@/components/ui/button';
+import {useNavigate} from 'react-router';
 import axios from "axios";
 
 export const Header = () => {
@@ -13,6 +14,7 @@ export const Header = () => {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
     const {toast} = useToast();
+    const navigate = useNavigate();
 
     const handleLogout = () => {
         axios.post('/api/user/logout').then(() => {
@@ -34,7 +36,8 @@ export const Header = () => {
         <>
             <header className="bg-white shadow py-4 relative">
                 <div className="container mx-auto px-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">ActPoly</h1>
+                    <h1 className="text-2xl font-bold text-gray-800 cursor-pointer"
+                        onClick={() => navigate('/')}>ActPoly</h1>
                     <div className="flex items-center space-x-3">
                         {user ? (
                             <div className="flex items-center space-x-3">
