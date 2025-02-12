@@ -54,3 +54,9 @@ class User(Base):
     @classmethod
     async def find_by_id(cls, session: AsyncSession, user_id: int):
         return await cls.find_one(session, id=user_id)
+
+    @classmethod
+    async def find_username_by_id(cls, session: AsyncSession, user_id: int):
+        query = select(cls.username).filter(cls.id == user_id)
+        result = await session.execute(query)
+        return result.scalars().first()

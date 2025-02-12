@@ -8,7 +8,7 @@ class ConnectionManager:
         # Dictionary mapping room names to a list of WebSocket connections.
         self.active_connections: Dict[uuid.UUID, List[WebSocket]] = {}
 
-    async def connect(self, game: uuid.UUID, websocket: WebSocket):
+    async def _connect(self, game: uuid.UUID, websocket: WebSocket):
         """Accept a new WebSocket connection and add it to the specified room."""
         await websocket.accept()
         if game not in self.active_connections:
@@ -23,13 +23,20 @@ class ConnectionManager:
             if not self.active_connections[game]:
                 del self.active_connections[game]
 
-    async def send_personal_message(self, message: str, websocket: WebSocket):
+    async def send_personal_message(self, data, websocket: WebSocket):
         """Send a message to a single WebSocket connection."""
-        await websocket.send_text(message)
+        await websocket.send_json(data)
 
-    async def broadcast(self, game: uuid.UUID, message: str):
+    async def broadcast(self, game: uuid.UUID, data):
         """Broadcast a message to all connections in a room."""
         if game in self.active_connections:
             for connection in self.active_connections[game]:
-                await connection.send_text(message)
+                await connection.send_json(data)
+
+    async def broadcast_except_sender(self, game: uuid.UUID, data, sender: WebSocket):
+        """Broadcast a message to all connections in a room except the sender."""
+        if game in self.active_connections:
+            for connection in self.active_connections[game]:
+                if connection != sender:
+                    await connection.send_json(data)
 

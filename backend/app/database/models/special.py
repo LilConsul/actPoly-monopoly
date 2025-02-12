@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .tile import Tile
 
+
 class SpecialTypeEnum(enum.Enum):
     go = "go"
     chest = "chest"
