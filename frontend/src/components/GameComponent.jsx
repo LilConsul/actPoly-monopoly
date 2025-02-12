@@ -1,192 +1,333 @@
-import React, {useState, useEffect, useRef} from "react";
-import {useParams} from "react-router";
-import {useUserStore} from "@/store/userStore";
-import {useToast} from "@/hooks/use-toast";
-import {ScrollArea} from "@/components/ui/scroll-area";
-import {Input} from "@/components/ui/input";
-import {Button} from "@/components/ui/button";
-import {Card, CardHeader, CardTitle, CardContent, CardFooter} from "@/components/ui/card";
-import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import { useEffect, useRef, useState } from "react"
+import { useParams } from "react-router"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { AlertCircle, Dices, Play } from "lucide-react"
 
 export const GameComponent = () => {
-    const {game_uuid} = useParams();
-    const {user} = useUserStore();
-    const {toast} = useToast();
+  const { game_uuid } = useParams()
+  const [boardTiles, setBoardTiles] = useState([])
+  const [messages, setMessages] = useState([])
+  const [selectedTile, setSelectedTile] = useState(null)
+  const ws = useRef(null)
 
-    const [messages, setMessages] = useState([]);
-    const [message, setMessage] = useState("");
-    const [wsStatus, setWsStatus] = useState("connecting");
+  useEffect(() => {
+    if (game_uuid) {
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws"
+      ws.current = new WebSocket(`${protocol}://${window.location.host}/api/ws/game/${game_uuid}`)
 
-    const wsRef = useRef(null);
-    const scrollRef = useRef(null);
-    const reconnectAttempts = useRef(0);
+      ws.current.onopen = () => {
+        console.log("WebSocket connected")
+      }
 
-    useEffect(() => {
-        if (!user) {
-            toast({
-                title: "Error",
-                description: "Please login to join the chat",
-                variant: "destructive",
-            });
-            return;
+      ws.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === "game" && Array.isArray(data.content)) {
+            const sortedTiles = data.content.sort((a, b) => a.index - b.index)
+            setBoardTiles(sortedTiles)
+          } else {
+            setMessages((prev) => [...prev, data])
+          }
+        } catch (error) {
+          console.error("Error parsing message:", error)
         }
+      }
 
-        const connectWebSocket = () => {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
+      ws.current.onclose = () => {
+        console.log("WebSocket disconnected")
+      }
 
-            const ws = new WebSocket(`wss://localhost/api/ws/game/${game_uuid}`);
+      ws.current.onerror = (error) => {
+        console.error("WebSocket error:", error)
+      }
 
-            ws.onopen = () => {
-                setWsStatus("connected");
-                toast({title: "Connected", description: "Connected to the game chat"});
-                reconnectAttempts.current = 0; // Reset attempts on success
-            };
+      return () => {
+        if (ws.current) ws.current.close()
+      }
+    }
+  }, [game_uuid])
 
-            ws.onmessage = (event) => {
-                const data = event.data;
-                setMessages((prev) => [...prev, {
-                    sender: "Server",
-                    content: data,
-                    timestamp: new Date().toISOString()
-                }]);
+  const sendMessage = (message) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify(message))
+    } else {
+      console.error("WebSocket is not connected.")
+    }
+  }
 
-                // Auto-scroll
-                setTimeout(() => {
-                    if (scrollRef.current) {
-                        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                    }
-                }, 100);
-            };
+  const handleStartGame = () => {
+    sendMessage({ type: "game", content: "start" })
+  }
 
-            ws.onclose = () => {
-                setWsStatus("disconnected");
-                toast({
-                    title: "Disconnected",
-                    description: "Lost connection to the game chat. Reconnecting...",
-                    variant: "destructive",
-                });
+  const handleRollDice = () => {
+    sendMessage({ type: "game", content: "roll" })
+  }
 
-                if (reconnectAttempts.current < 5) {
-                    setTimeout(connectWebSocket, 2000 * reconnectAttempts.current);
-                    reconnectAttempts.current += 1;
-                }
-            };
+  const getTileByIndex = (targetIndex) => {
+    return boardTiles.find((tile) => tile.index === targetIndex)
+  }
 
-            ws.onerror = () => {
-                setWsStatus("error");
-                toast({
-                    title: "Error",
-                    description: "Failed to connect to the game chat",
-                    variant: "destructive",
-                });
-            };
+  const getTileStyle = (tile) => {
+    if (!tile) return { backgroundColor: "bg-white" }
 
-            wsRef.current = ws;
-        };
+    if (tile.type === "property" && tile.property?.group?.color) {
+      // Convert hex to Tailwind color when possible, fallback to inline style
+      return {
+        style: { backgroundColor: tile.property.group.color },
+      }
+    } else if (tile.type === "company") {
+      return { className: "bg-green-100" }
+    } else if (tile.type === "railway") {
+      return { className: "bg-red-100" }
+    } else if (tile.type === "special") {
+      return { className: "bg-gray-100" }
+    }
+    return { className: "bg-white" }
+  }
 
-        connectWebSocket();
+  const renderTileLabel = (tile) => {
+    if (!tile) return null
 
-        return () => {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
-        };
-    }, [game_uuid, user, toast]);
+    const label = (() => {
+      switch (tile.type) {
+        case "company":
+          return tile.company?.name || "Company"
+        case "railway":
+          return tile.railway?.name || "Railway"
+        case "property":
+          return tile.property?.name || "Property"
+        case "special":
+          return tile.special?.type || "Special"
+        default:
+          return "Tile"
+      }
+    })()
 
-    const sendMessage = (e) => {
-        e.preventDefault();
-        if (!message.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            toast({
-                title: "Error",
-                description: "Connection lost. Please wait while we reconnect.",
-                variant: "destructive",
-            });
-            return;
+    return <span className="text-xs font-medium text-center truncate">{label}</span>
+  }
+
+  // Board section renderers
+  const renderTopRow = () => {
+    const cells = []
+    for (let i = 20; i <= 30; i++) {
+      const tile = getTileByIndex(i)
+      const tileStyle = getTileStyle(tile)
+      cells.push(
+        <div
+          key={`top-${i}`}
+          className={`tile-cell ${tileStyle.className || ""}`}
+          style={tileStyle.style}
+          onClick={() => setSelectedTile(tile)}
+        >
+          {renderTileLabel(tile)}
+        </div>,
+      )
+    }
+    return <div className="flex">{cells}</div>
+  }
+
+  const renderBottomRow = () => {
+    const cells = []
+    for (let i = 10; i >= 0; i--) {
+      const tile = getTileByIndex(i)
+      const tileStyle = getTileStyle(tile)
+      cells.push(
+        <div
+          key={`bottom-${i}`}
+          className={`tile-cell ${tileStyle.className || ""}`}
+          style={tileStyle.style}
+          onClick={() => setSelectedTile(tile)}
+        >
+          {renderTileLabel(tile)}
+        </div>,
+      )
+    }
+    return <div className="flex">{cells}</div>
+  }
+
+  const renderLeftColumn = () => {
+    const cells = []
+    for (let i = 19; i >= 11; i--) {
+      const tile = getTileByIndex(i)
+      const tileStyle = getTileStyle(tile)
+      cells.push(
+        <div
+          key={`left-${i}`}
+          className={`tile-cell vertical ${tileStyle.className || ""}`}
+          style={tileStyle.style}
+          onClick={() => setSelectedTile(tile)}
+        >
+          {renderTileLabel(tile)}
+        </div>,
+      )
+    }
+    return <div className="flex flex-col">{cells}</div>
+  }
+
+  const renderRightColumn = () => {
+    const cells = []
+    for (let i = 31; i <= 39; i++) {
+      const tile = getTileByIndex(i)
+      const tileStyle = getTileStyle(tile)
+      cells.push(
+        <div
+          key={`right-${i}`}
+          className={`tile-cell vertical ${tileStyle.className || ""}`}
+          style={tileStyle.style}
+          onClick={() => setSelectedTile(tile)}
+        >
+          {renderTileLabel(tile)}
+        </div>,
+      )
+    }
+    return <div className="flex flex-col">{cells}</div>
+  }
+
+  return (
+    <div className="container mx-auto p-6 max-w-5xl">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <div className="flex-1">Monopoly Game</div>
+            <Badge variant="outline" className="text-sm font-normal">
+              ID: {game_uuid}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-6">
+            <Button onClick={handleStartGame} className="flex items-center gap-2">
+              <Play size={16} />
+              Start Game
+            </Button>
+            <Button onClick={handleRollDice} variant="secondary" className="flex items-center gap-2">
+              <Dices size={16} />
+              Roll Dice
+            </Button>
+          </div>
+
+          <div className="board-container border-2 border-black w-full max-w-2xl mx-auto">
+            {renderTopRow()}
+            <div className="flex">
+              {renderLeftColumn()}
+              <div className="flex-1 flex items-center justify-center p-4">
+                <div className="text-center text-2xl font-bold text-gray-300 rotate-45">MONOPOLY</div>
+              </div>
+              {renderRightColumn()}
+            </div>
+            {renderBottomRow()}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Game Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[300px] pr-4">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <AlertCircle size={24} className="mb-2" />
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                messages.map((msg, index) => (
+                  <div key={index} className="mb-2 last:mb-0">
+                    {msg.timestamp && (
+                      <span className="text-xs text-gray-500">
+                        {new Date(msg.timestamp * 1000).toLocaleTimeString()}
+                      </span>
+                    )}
+                    <p className="text-sm">{msg.content}</p>
+                    {index < messages.length - 1 && <Separator className="my-2" />}
+                  </div>
+                ))
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <span className="sr-only">View tile details</span>
+          </DialogTrigger>
+          {selectedTile && (
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{renderTileLabel(selectedTile)}</DialogTitle>
+                <DialogDescription>Tile Index: {selectedTile.index}</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">Tile Details</h3>
+                {selectedTile.type === "property" && (
+                  <div>
+                    <p>Price: £{selectedTile.property.price}</p>
+                    <p>Rent: £{selectedTile.property.rent_0_house}</p>
+                    <p>Mortgage: £{selectedTile.property.mortgage}</p>
+                    <p>Color: {selectedTile.property.group.name}</p>
+                  </div>
+                )}
+                {selectedTile.type === "railway" && (
+                  <div>
+                    <p>Price: £{selectedTile.railway.price}</p>
+                    <p>Rent (1 railway): £{selectedTile.railway.rent_1}</p>
+                    <p>Rent (4 railways): £{selectedTile.railway.rent_4}</p>
+                    <p>Mortgage: £{selectedTile.railway.mortgage}</p>
+                  </div>
+                )}
+                {selectedTile.type === "company" && (
+                  <div>
+                    <p>Price: £{selectedTile.company.price}</p>
+                    <p>Rent Multiplier: {selectedTile.company.rent_1}x dice roll</p>
+                    <p>Mortgage: £{selectedTile.company.mortgage}</p>
+                  </div>
+                )}
+                {selectedTile.type === "special" && (
+                  <div>
+                    <p>Type: {selectedTile.special.type}</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          )}
+        </Dialog>
+      </div>
+
+      <style jsx>{`
+        .tile-cell {
+          flex: 1;
+          border: 1px solid #000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2px;
+          margin: 1px;
+          min-height: 50px;
+          cursor: pointer;
+          overflow: hidden;
         }
+        .tile-cell.vertical {
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+          min-height: 60px;
+          padding: 4px;
+        }
+      `}</style>
+    </div>
+  )
+}
 
-        const messageData = {
-            type: "game",
-            content: message,
-            timestamp: Math.floor(Date.now() / 1000),
-        };
-
-        wsRef.current.send(JSON.stringify(messageData));
-        setMessage("");
-    };
-
-    const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
-
-    return (
-        <main className="flex-1 bg-gradient-to-b from-background to-muted/20">
-            <Card className="w-full max-w-md mx-auto h-[600px] flex flex-col">
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>Game Chat</span>
-                        <span
-                            className={`text-sm px-2 py-1 rounded-full ${
-                                wsStatus === "connected" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}
-                        >
-            {wsStatus === "connected" ? "Connected" : "Reconnecting..."}
-          </span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow overflow-hidden">
-                    <ScrollArea className="h-[450px] pr-4" ref={scrollRef}>
-                        <div className="space-y-4">
-                            {messages.map((msg, idx) => (
-                                <div key={idx}
-                                     className={`flex items-start gap-2 ${msg.sender === user?.username ? "flex-row-reverse" : ""}`}>
-                                    <Avatar className="w-8 h-8">
-                                        <AvatarImage
-                                            src={`https://api.dicebear.com/7.x/initials/svg?seed=${msg.sender}`}
-                                            alt={msg.sender}/>
-                                        <AvatarFallback>{msg.sender.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <div
-                                        className={`max-w-[80%] ${
-                                            msg.sender === user?.username ? "bg-blue-500 text-white" : "bg-gray-100"
-                                        } rounded-lg p-2`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                    <span
-                        className={`text-sm font-medium ${msg.sender === user?.username ? "text-blue-50" : "text-gray-600"}`}>
-                      {msg.sender}
-                    </span>
-                                            <span
-                                                className={`text-xs ${msg.sender === user?.username ? "text-blue-100" : "text-gray-400"}`}>
-                      {formatTime(msg.timestamp)}
-                    </span>
-                                        </div>
-                                        <p className="break-words">{msg.content}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-                <CardFooter>
-                    <form onSubmit={sendMessage} className="w-full flex gap-2">
-                        <Input
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            disabled={wsStatus !== "connected"}
-                            className="flex-grow"
-                        />
-                        <Button type="submit" disabled={wsStatus !== "connected" || !message.trim()}>
-                            Send
-                        </Button>
-                    </form>
-                </CardFooter>
-            </Card>
-        </main>
-    );
-};

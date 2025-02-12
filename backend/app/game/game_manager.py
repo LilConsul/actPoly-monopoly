@@ -63,14 +63,14 @@ class GameManager(ConnectionManager):
             )
 
     async def disconnect(self, game: uuid.UUID, websocket: WebSocket, user_id: int):
-        super()._disconnect(game, websocket)
-        if self.active_games[game]["status"] != "started":
-            del self.active_games[game]["users"][user_id]
         await self.broadcast_except_sender(
             game,
             self.create_data(f"{self.active_games[game]["users"][user_id]} disconnected"),
             websocket
         )
+        if self.active_games[game]["status"] != "started":
+            del self.active_games[game]["users"][user_id]
+        super()._disconnect(game, websocket)
 
     async def start_game(self, game: uuid.UUID, websocket: WebSocket):
         if len(self.active_games[game]["users"]) < 2:
