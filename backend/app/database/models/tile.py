@@ -26,7 +26,15 @@ class Tile(Base):
     )
 
     # Optional one-to-one relationships; these will be set only for the proper tile type.
-    property: Mapped["Property"] = relationship("Property", back_populates="tile", uselist=False)
-    railway: Mapped["Railway"] = relationship("Railway", back_populates="tile", uselist=False)
-    company: Mapped["Company"] = relationship("Company", back_populates="tile", uselist=False)
-    special: Mapped["Special"] = relationship("Special", back_populates="tile", uselist=False)
+    property: Mapped["Property"] = relationship(
+        "Property", back_populates="tile", uselist=False
+    )
+    railway: Mapped["Railway"] = relationship(
+        "Railway", back_populates="tile", uselist=False
+    )
+    company: Mapped["Company"] = relationship(
+        "Company", back_populates="tile", uselist=False
+    )
+    special: Mapped["Special"] = relationship(
+        "Special", back_populates="tile", uselist=False
+    )

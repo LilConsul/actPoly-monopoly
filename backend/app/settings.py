@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
     PROJECT_NAME: str
-    CORS_ORIGINS: List[
-        AnyHttpUrl
-    ]
+    CORS_ORIGINS: List[AnyHttpUrl]
     DEBUG: bool
 
     # Domain settings
@@ -64,9 +62,7 @@ class Settings(BaseSettings):
     ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 
     class Config:
-        case_sensitive = (
-            True
-        )
+        case_sensitive = True
         env_prefix = ""
 
 

@@ -26,10 +26,10 @@ GROUP_COLOR_MAPPING = {
     "Yellow": "#FFFF00",
     "Green": "#008000",
     "Dark Blue": "#00008B",
-
     "Railroad": "#808080",
     "Utility": "#D3D3D3",
 }
+
 
 async def load_game_data():
     await asyncio.gather(
@@ -37,11 +37,13 @@ async def load_game_data():
         load_cards(cards),
     )
 
+
 async def reload_game_data():
     await asyncio.gather(
         clean_game_data(),
         load_game_data(),
     )
+
 
 async def clean_game_data():
     async with db_helper.get_scoped_session()() as session:
@@ -53,6 +55,7 @@ async def clean_game_data():
         await session.execute(delete(Group))
 
         await session.commit()
+
 
 async def load_tiles(data: list[dict]):
     async with db_helper.get_scoped_session()() as session:
@@ -190,7 +193,7 @@ async def load_tiles(data: list[dict]):
 
         await session.commit()
 
+
 # TODO: Implement the load_cards function
-async def load_cards(data: list[dict]
-                     ):
+async def load_cards(data: list[dict]):
     pass

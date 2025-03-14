@@ -13,7 +13,13 @@ from app.game import load_game_data, reload_game_data
 
 from utils import validation_exception_handler
 
-logger.add(f"{settings.ROOT_DIR}/app.log", rotation="50 MB", compression="zip", retention="7 days")
+logger.add(
+    f"{settings.ROOT_DIR}/app.log",
+    rotation="50 MB",
+    compression="zip",
+    retention="7 days",
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,10 +29,9 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Shutting down the application")
 
+
 app = FastAPI(
-    title=f"{settings.PROJECT_NAME} API",
-    root_path="/api/",
-    lifespan=lifespan
+    title=f"{settings.PROJECT_NAME} API", root_path="/api/", lifespan=lifespan
 )
 
 app.add_middleware(
@@ -48,10 +53,12 @@ async def root():
     logger.info("Root endpoint accessed")
     return {"message": "Hello World"}
 
+
 @app.post("/reload")
 async def reload():
     await reload_game_data()
     return {"message": "Game data reloaded"}
+
 
 # For development purposes
 

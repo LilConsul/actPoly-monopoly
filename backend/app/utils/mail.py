@@ -20,7 +20,9 @@ mail_config = ConnectionConfig(
 mail = FastMail(mail_config)
 
 
-def create_single_message(recipient: str, subject: str, body: Dict[str, Any]) -> MessageSchema:
+def create_single_message(
+    recipient: str, subject: str, body: Dict[str, Any]
+) -> MessageSchema:
     return MessageSchema(
         subject=subject,
         recipients=[recipient],
@@ -29,19 +31,27 @@ def create_single_message(recipient: str, subject: str, body: Dict[str, Any]) ->
     )
 
 
-async def send_verification_mail(background_tasks: BackgroundTasks, email: str, link: str):
+async def send_verification_mail(
+    background_tasks: BackgroundTasks, email: str, link: str
+):
     message = create_single_message(
         recipient=email,
         subject="Email Verification",
         body={"link": link},
     )
-    background_tasks.add_task(mail.send_message, message, template_name="mail/verify.html")
+    background_tasks.add_task(
+        mail.send_message, message, template_name="mail/verify.html"
+    )
 
 
-async def send_password_reset_mail(background_tasks: BackgroundTasks, email: str, link: str):
+async def send_password_reset_mail(
+    background_tasks: BackgroundTasks, email: str, link: str
+):
     message = create_single_message(
         recipient=email,
         subject="Password Reset",
         body={"link": link},
     )
-    background_tasks.add_task(mail.send_message, message, template_name="mail/password_reset.html")
+    background_tasks.add_task(
+        mail.send_message, message, template_name="mail/password_reset.html"
+    )

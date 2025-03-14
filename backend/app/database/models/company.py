@@ -9,7 +9,9 @@ if TYPE_CHECKING:
 
 class Company(Base):
     # Corresponds to table "company"
-    tile_id: Mapped[int] = mapped_column(ForeignKey("tiles.id"), unique=True, nullable=False)
+    tile_id: Mapped[int] = mapped_column(
+        ForeignKey("tiles.id"), unique=True, nullable=False
+    )
 
     # Display information
     name: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -11,7 +11,9 @@ serializer = URLSafeTimedSerializer(secret_key=settings.SECRET_KEY, salt="mail")
 
 def create_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_SECONDS)
+    expire = datetime.now(timezone.utc) + timedelta(
+        seconds=settings.ACCESS_TOKEN_EXPIRE_SECONDS
+    )
     to_encode.update({"exp": expire})
     token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return token

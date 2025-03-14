@@ -17,7 +17,12 @@ class GameManager(ConnectionManager):
         self.active_games: Dict[uuid.UUID, Dict[str, Any]] = {}
 
     async def first_init_game(self, game: uuid.UUID, session: AsyncSession):
-        self.active_games[game] = {"tiles": [], "users": {}, "game_data": {}, "status": "waiting"}
+        self.active_games[game] = {
+            "tiles": [],
+            "users": {},
+            "game_data": {},
+            "status": "waiting",
+        }
         query = select(Tile).options(
             joinedload(Tile.property).joinedload(Property.group),
             joinedload(Tile.railway),
@@ -37,13 +42,17 @@ class GameManager(ConnectionManager):
         return {
             "content": data,
             "type": "game",
-            "timestamp": round(datetime.now(timezone.utc).timestamp())
+            "timestamp": round(datetime.now(timezone.utc).timestamp()),
         }
 
-    async def connect(self, game: uuid.UUID, websocket: WebSocket, user_id: int, session: AsyncSession):
+    async def connect(
+        self, game: uuid.UUID, websocket: WebSocket, user_id: int, session: AsyncSession
+    ):
         # TODO: fix if user is already in game but reconnects
         if game in self.active_games and (
-                self.active_games[game]["status"] == "started" or len(self.active_games[game]["users"]) == 4):
+            self.active_games[game]["status"] == "started"
+            or len(self.active_games[game]["users"]) == 4
+        ):
             raise WebSocketException(code=403)
 
         await super()._connect(game, websocket)
@@ -51,23 +60,24 @@ class GameManager(ConnectionManager):
             await self.first_init_game(game, session)
 
         await self.send_personal_message(
-            self.create_data(self.active_games[game]["tiles"]),
-            websocket
+            self.create_data(self.active_games[game]["tiles"]), websocket
         )
 
         if user_id not in self.active_games[game]["users"]:  # If user firstly connect
             await self.get_username(game, user_id, session)
             await self.broadcast_except_sender(
                 game,
-                self.create_data(f"{self.active_games[game]["users"][user_id]} joined"),
-                websocket
+                self.create_data(f"{self.active_games[game]['users'][user_id]} joined"),
+                websocket,
             )
 
     async def disconnect(self, game: uuid.UUID, websocket: WebSocket, user_id: int):
         await self.broadcast_except_sender(
             game,
-            self.create_data(f"{self.active_games[game]["users"][user_id]} disconnected"),
-            websocket
+            self.create_data(
+                f"{self.active_games[game]['users'][user_id]} disconnected"
+            ),
+            websocket,
         )
         if self.active_games[game]["status"] != "started":
             del self.active_games[game]["users"][user_id]
@@ -76,8 +86,7 @@ class GameManager(ConnectionManager):
     async def start_game(self, game: uuid.UUID, websocket: WebSocket):
         if len(self.active_games[game]["users"]) < 2:
             await self.send_personal_message(
-                self.create_data("Need at least 2 players to start the game"),
-                websocket
+                self.create_data("Need at least 2 players to start the game"), websocket
             )
             return
         self.active_games[game]["status"] = "started"
@@ -88,8 +97,7 @@ class GameManager(ConnectionManager):
         # TODO: Add logic for checking if it's user's turn
         if self.active_games[game]["status"] != "started":
             await self.send_personal_message(
-                self.create_data("Game not started yet"),
-                websocket
+                self.create_data("Game not started yet"), websocket
             )
             return
         dice1 = random.randint(1, 6)
@@ -98,11 +106,15 @@ class GameManager(ConnectionManager):
         # TODO: Add separating for sending dice roll message
         await self.broadcast(
             game,
-            self.create_data(f"{self.active_games[game]['users'][user_id]} rolled {dice1} {dice2}")
+            self.create_data(
+                f"{self.active_games[game]['users'][user_id]} rolled {dice1} {dice2}"
+            ),
         )
         # TODO: Add logic for moving the user position
 
-    async def process_game_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+    async def process_game_message(
+        self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int
+    ):
         content = data["content"]
         match content:
             case "start":
@@ -110,10 +122,14 @@ class GameManager(ConnectionManager):
             case "roll":
                 await self.roll_dice(game, websocket, user_id)
 
-    async def process_chat_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+    async def process_chat_message(
+        self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int
+    ):
         pass
 
-    async def process_message(self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int):
+    async def process_message(
+        self, game: uuid.UUID, websocket: WebSocket, data: dict, user_id: int
+    ):
         if data["type"] == "game":
             await self.process_game_message(game, websocket, data, user_id)
         elif data["type"] == "chat":

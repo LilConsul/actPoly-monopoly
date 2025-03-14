@@ -20,7 +20,9 @@ class SpecialTypeEnum(enum.Enum):
 
 class Special(Base):
     # Corresponds to table "specials"
-    tile_id: Mapped[int] = mapped_column(ForeignKey("tiles.id"), unique=True, nullable=False)
+    tile_id: Mapped[int] = mapped_column(
+        ForeignKey("tiles.id"), unique=True, nullable=False
+    )
     type: Mapped[SpecialTypeEnum] = mapped_column(
         Enum(SpecialTypeEnum, name="special_type_enum"), nullable=False
     )

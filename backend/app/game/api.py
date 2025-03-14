@@ -1,4 +1,10 @@
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Depends, WebSocketException
+from fastapi import (
+    WebSocket,
+    APIRouter,
+    WebSocketDisconnect,
+    Depends,
+    WebSocketException,
+)
 import uuid
 
 from sqlalchemy import select
@@ -30,9 +36,9 @@ async def get(session: AsyncSession = Depends(db_helper.session_dependency)):
 
 @router.websocket("/{game_uuid}")
 async def websocket_endpoint(
-        websocket: WebSocket,
-        game_uuid: uuid.UUID,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    websocket: WebSocket,
+    game_uuid: uuid.UUID,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     token: str = websocket.cookies.get("access_token")
     if not token or "Bearer" not in token:

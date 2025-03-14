@@ -10,11 +10,11 @@ from typing import Dict
 
 class OAuth2PasswordBearerWithCookie(OAuth2):
     def __init__(
-            self,
-            tokenUrl: str,
-            scheme_name: Optional[str] = None,
-            scopes: Optional[Dict[str, str]] = None,
-            auto_error: bool = True,
+        self,
+        tokenUrl: str,
+        scheme_name: Optional[str] = None,
+        scopes: Optional[Dict[str, str]] = None,
+        auto_error: bool = True,
     ):
         if not scopes:
             scopes = {}
@@ -22,7 +22,9 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
 
     async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.cookies.get("access_token")  # changed to accept access token from httpOnly Cookie
+        authorization: str = request.cookies.get(
+            "access_token"
+        )  # changed to accept access token from httpOnly Cookie
         print("access_token is", authorization)
 
         scheme, param = get_authorization_scheme_param(authorization)

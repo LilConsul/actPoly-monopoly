@@ -3,35 +3,48 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import db_helper
 from .cookie import oauth2_scheme
 from .hash import get_password_hash
-from .schemas import UserRegister, URLToken, EmailData, ResponseModel, LoginData, PasswordResetSchema
+from .schemas import (
+    UserRegister,
+    URLToken,
+    EmailData,
+    ResponseModel,
+    LoginData,
+    PasswordResetSchema,
+)
 from app.database.models import User, Player
 from app.utils.mail import send_verification_mail, send_password_reset_mail
 from app.settings import settings
-from .tokens import create_url_safe_token, decode_url_safe_token, create_token, decode_token
+from .tokens import (
+    create_url_safe_token,
+    decode_url_safe_token,
+    create_token,
+    decode_token,
+)
 
 router = APIRouter(prefix="/user", tags=["users"])
 
 
 @router.get("/", response_model=ResponseModel, response_model_exclude_none=True)
 async def get_profile_data(
-        token: str = Depends(oauth2_scheme),
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     payload = decode_token(token)
     user = await User.get_profile(session, int(payload["sub"]))
-    return ResponseModel(
-        message="User data retrieved successfully",
-        data=user
-    )
+    return ResponseModel(message="User data retrieved successfully", data=user)
 
 
-@router.post("/register", response_model=ResponseModel, response_model_exclude_none=True)
+@router.post(
+    "/register", response_model=ResponseModel, response_model_exclude_none=True
+)
 async def register(
-        user_data: UserRegister,
-        background_tasks: BackgroundTasks,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    user_data: UserRegister,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    user_exists = await User.find_by_email_and_username(session, str(user_data.email), user_data.username)
+    user_exists = await User.find_by_email_and_username(
+        session, str(user_data.email), user_data.username
+    )
 
     if user_exists is not None:
         if user_exists.email == user_data.email:
@@ -67,8 +80,7 @@ async def register(
 
 @router.post("/verify", response_model=ResponseModel, response_model_exclude_none=True)
 async def verify(
-        token: URLToken,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    token: URLToken, session: AsyncSession = Depends(db_helper.session_dependency)
 ):
     token_data = decode_url_safe_token(token.token)
     if not (user := await User.find_by_id(session, int(token_data["id"]))):
@@ -84,14 +96,18 @@ async def verify(
 
 @router.post("/login", response_model=ResponseModel, response_model_exclude_none=True)
 async def login(
-        response: Response,
-        form_data: LoginData,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    response: Response,
+    form_data: LoginData,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     if "@" in form_data.username:
-        user = await User.authenticate(session, password=form_data.password, email=form_data.username)
+        user = await User.authenticate(
+            session, password=form_data.password, email=form_data.username
+        )
     else:
-        user = await User.authenticate(session, password=form_data.password, username=form_data.username)
+        user = await User.authenticate(
+            session, password=form_data.password, username=form_data.username
+        )
 
     if not user:
         raise HTTPException(
@@ -113,12 +129,12 @@ async def login(
         max_age=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         expires=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         samesite="lax",
-        secure=True
+        secure=True,
     )
 
     return ResponseModel(
         message="Login successful",
-        data={"username": user.username, "email": user.email}
+        data={"username": user.username, "email": user.email},
     )
 
 
@@ -128,11 +144,13 @@ async def logout(response: Response):
     return {"message": "Logout successful"}
 
 
-@router.post("/password-reset", response_model=ResponseModel, response_model_exclude_none=True)
+@router.post(
+    "/password-reset", response_model=ResponseModel, response_model_exclude_none=True
+)
 async def password_reset_request(
-        email: EmailData,
-        background_tasks: BackgroundTasks,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    email: EmailData,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     email = str(email.email)
     if not (user := await User.find_by_email(session, email)):
@@ -147,10 +165,14 @@ async def password_reset_request(
     return ResponseModel(message="Password reset link sent to email")
 
 
-@router.post("/password-reset/verify", response_model=ResponseModel, response_model_exclude_none=True)
+@router.post(
+    "/password-reset/verify",
+    response_model=ResponseModel,
+    response_model_exclude_none=True,
+)
 async def password_reset_verify(
-        data: PasswordResetSchema,
-        session: AsyncSession = Depends(db_helper.session_dependency)
+    data: PasswordResetSchema,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     token_data = decode_url_safe_token(data.token)
     if not (user := await User.find_by_id(session, int(token_data["id"]))):

@@ -39,4 +39,3 @@ class ConnectionManager:
             for connection in self.active_connections[game]:
                 if connection != sender:
                     await connection.send_json(data)
-

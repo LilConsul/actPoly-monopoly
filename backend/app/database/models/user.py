@@ -6,35 +6,48 @@ from .player import Player
 from app.user.hash import verify_password
 
 
-
 class User(Base):
-    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
-    username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    email: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    username: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     player: Mapped["Player"] = relationship(
-        "Player", back_populates="user", cascade="all, delete-orphan", single_parent=True, uselist=False
+        "Player",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        single_parent=True,
+        uselist=False,
     )
 
     @classmethod
-    async def find_by_email_and_username(cls, session: AsyncSession, email: str, username: str):
+    async def find_by_email_and_username(
+        cls, session: AsyncSession, email: str, username: str
+    ):
         query = select(cls).filter(or_(cls.email == email, cls.username == username))
         result = await session.execute(query)
         return result.scalars().first()
 
     @classmethod
     async def get_profile(cls, session: AsyncSession, user_id: int):
-        query = select(
-            cls.id,
-            cls.username,
-            cls.email,
-            cls.is_admin,
-            Player.games_lost,
-            Player.games_played,
-            Player.games_won
-        ).filter(cls.id == user_id).join(Player, cls.player)
+        query = (
+            select(
+                cls.id,
+                cls.username,
+                cls.email,
+                cls.is_admin,
+                Player.games_lost,
+                Player.games_played,
+                Player.games_won,
+            )
+            .filter(cls.id == user_id)
+            .join(Player, cls.player)
+        )
         result = await session.execute(query)
         return result.mappings().first()
 
@@ -45,7 +58,6 @@ class User(Base):
 
         user = await cls.find_one(session, **kwargs)
         return user if user and verify_password(password, user.password) else None
-
 
     @classmethod
     async def find_by_email(cls, session: AsyncSession, email: str):
